@@ -74,7 +74,7 @@ export default {
     },
     // 跳转注册界面，暂时无效果
     register () {
-      this.$router.push('/register')
+      this.$refs.loginFormRef.resetFields()
     },
     login () {
       this.$refs.loginFormRef.validate(async valid => {
@@ -89,12 +89,8 @@ export default {
           }
           return this.$message.error('登陆失败，请检查账号是否存在')
         } else this.$message.success('登陆成功!')
-        window.sessionStorage.setItem('accessToken', res.data.accessToken)
-        window.sessionStorage.setItem('refreshToken', res.data.refreshToken)
-        window.sessionStorage.setItem('username', res.data.username)
-        window.sessionStorage.setItem('id', res.data.id)
-        window.sessionStorage.setItem('phone', res.data.phone)
-        this.$router.push('/adminhome')
+        window.sessionStorage.setItem('token', res.data.token)
+        this.$router.push('/home')
       })
     }
   }
@@ -108,7 +104,7 @@ export default {
 }
 .login_box {
   width: 450px;
-  height: 300px;
+  height: 350px;
   background: #fff;
   border-radius: 3px;
   position: absolute;
@@ -135,7 +131,6 @@ export default {
   }
 }
 .login_form {
-  
   position: absolute;
   bottom: 0;
   width: 100%;
