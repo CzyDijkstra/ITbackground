@@ -25,10 +25,16 @@
             type="password"
           ></el-input>
         </el-form-item>
-        <el-form-item>
-          <el-button @click="dialogVisible = true" style="width:100%" v-if="!canLogin">点击进行验证</el-button>
-          <el-button type="success" disabled style="width:100%" v-if="canLogin">通过验证</el-button>
-        </el-form-item>
+
+        <template>
+          <div class="jc-component__range">
+            <div class="jc-range" :class="rangeStatus?'success':''">
+              <i @mousedown="rangeMove" :class="rangeStatus?successIcon:startIcon"></i>
+              {{rangeStatus?successText:startText}}
+            </div>
+          </div>
+        </template>
+
         <!-- 按钮 -->
         <el-form-item class="btn_s">
           <el-button type="primary" @click="login">登录</el-button>
@@ -37,22 +43,44 @@
         </el-form-item>
       </el-form>
     </div>
-    <el-dialog title="验证" :visible.sync="dialogVisible" width="50%" :before-close="handleClose">
-      <slide-verify ref="slideblock" @success="onSuccess"></slide-verify>
-    </el-dialog>
   </div>
 </template>
 
 <script>
-import ValidCode from './ValidCode'
 export default {
   created() {
     this.isLogined()
   },
+  props: {
+    //成功图标
+    successIcon: {
+      type: String,
+      default: 'el-icon-success'
+    },
+    //成功文字
+    successText: {
+      type: String,
+      default: '验证成功'
+    },
+    //开始的图标
+    startIcon: {
+      type: String,
+      default: 'el-icon-d-arrow-right'
+    },
+    //开始的文字
+    startText: {
+      type: String,
+      default: '拖动滑块到最右边'
+    },
+    //或者用值来进行监听
+    status: {
+      type: String
+    }
+  },
   data() {
     return {
       disX: 0,
-      dialogVisible: false,
+      rangeStatus: false,
       // 登录表单
       loginForm: {
         username: '',
@@ -74,21 +102,60 @@ export default {
     }
   },
   methods: {
-    onSuccess() {
-      this.canLogin = true
-      this.$message.success('验证通过')
-      this.dialogVisible = false
+    //滑块移动
+    rangeMove(e) {
+      let ele = e.target
+      let startX = e.clientX
+      let eleWidth = ele.offsetWidth
+      let parentWidth = ele.parentElement.offsetWidth
+      let MaxX = parentWidth - eleWidth
+      if (this.rangeStatus) {
+        //不运行
+        return false
+      }
+      document.onmousemove = e => {
+        let endX = e.clientX
+        this.disX = endX - startX
+        if (this.disX <= 0) {
+          this.disX = 0
+        }
+        if (this.disX >= MaxX - eleWidth) {
+          //减去滑块的宽度,体验效果更好
+          this.disX = MaxX
+        }
+        ele.style.transition = '.1s all'
+        ele.style.transform = 'translateX(' + this.disX + 'px)'
+        e.preventDefault()
+      }
+      document.onmouseup = () => {
+        if (this.disX !== MaxX) {
+          ele.style.transition = '.5s all'
+          ele.style.transform = 'translateX(0)'
+          //执行成功的函数
+          this.errorFun && this.errorFun()
+        } else {
+          this.rangeStatus = true
+          if (this.status) {
+            this.$parent[this.status] = true
+          }
+          //执行成功的函数
+          this.successFun && this.successFun()
+        }
+        document.onmousemove = null
+        document.onmouseup = null
+      }
     },
-    handleClose(done) {
-      this.$confirm('确认关闭？')
-        .then(_ => {
-          done()
-        })
-        .catch(_ => {})
+    //失败之后的函数
+    errorFun() {
+      this.canLogin = false
+      this.$message.error('验证失败.请刷新网站重尝试')
+    },
+    // 成功之后的函数
+    successFun() {
+      this.canLogin = true
     },
     // 重置登录表单
     resetLoginForm() {
-      this.$refs.slideblock.reset()
       this.$refs.loginFormRef.resetFields()
     },
     // 跳转注册界面
@@ -96,6 +163,7 @@ export default {
       this.$router.push('/register')
     },
     login() {
+      
       this.$refs.loginFormRef.validate(async valid => {
         // eslint-disable-next-line semi
         if (!valid) return
@@ -107,7 +175,7 @@ export default {
           if (res.code === 4000004) {
             return this.$message.error('登录失败，账号密码不匹配')
           }
-          return this.$message.error('登陆失败' + res.msg)
+          return this.$message.error('登陆失败'+res.msg)
         } else {
           this.$message.success('登陆成功!')
           window.localStorage.setItem('accessToken', res.data.accessToken)
